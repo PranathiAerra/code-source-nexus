@@ -60,7 +60,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <Card className="overflow-hidden h-full flex flex-col transition-shadow hover:shadow-lg">
       <div className="aspect-square relative overflow-hidden bg-gray-100">
         <img
-          src={imageError || !product.image ? fallbackImage : product.image}
+          src={imageError ? fallbackImage : product.image}
           alt={product.name}
           className="object-contain h-full w-full p-4"
           onError={handleImageError}
@@ -83,7 +83,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             <IndianRupee className="h-4 w-4 mr-1" />
             {formatPrice(product.price)}
           </div>
-          {product.originalPrice && (
+          {product.originalPrice && product.originalPrice > product.price && (
             <>
               <div className="text-gray-500 text-sm line-through ml-2 flex items-center">
                 <IndianRupee className="h-3 w-3 mr-1" />

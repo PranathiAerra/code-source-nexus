@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,6 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -48,113 +49,147 @@ serve(async (req) => {
       topRated
     }, null, 2));
 
-    // Start with base query for amazon_products_2
-    let query = supabase
-      .from('amazon_products_2')
-      .select('*', { count: 'exact' })
-      .limit(limit)
-      .range(offset, offset + limit - 1);
+    // Function to transform Flipkart product to common format
+    const transformFlipkartProduct = (product: any) => ({
+      id: product.uniq_id || String(Math.random()),
+      name: product.product_name || 'Unknown Product',
+      price: parseFloat(product.discounted_price?.replace(/[^0-9.]/g, '') || '0'),
+      originalPrice: parseFloat(product.retail_price?.replace(/[^0-9.]/g, '') || '0'),
+      image: Array.isArray(product.image) ? product.image[0] : product.image || fallbackImage,
+      rating: parseFloat(product.product_rating || '0') || Math.floor(Math.random() * 2) + 3.5,
+      store: 'Flipkart',
+      storeUrl: 'https://www.flipkart.com',
+      offer: product.discounted_price && product.retail_price 
+        ? `${Math.round(((parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) - parseFloat(product.discounted_price.replace(/[^0-9.]/g, ''))) / parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) * 100)}%`
+        : null
+    });
 
-    // Apply search filter if provided using more comprehensive search
+    // Function to transform Amazon product to common format
+    const transformAmazonProduct = (product: any) => ({
+      id: product['Unique ID'] || String(Math.random()),
+      name: product['Product Title'] || 'Unknown Product',
+      price: typeof product.Price === 'number' ? product.Price : parseFloat(product.Price || '0'),
+      originalPrice: typeof product.Mrp === 'number' ? product.Mrp : parseFloat(product.Mrp || '0'),
+      image: product['Image Urls'] || fallbackImage,
+      rating: Math.floor(Math.random() * 2) + 3.5,
+      store: product['Site Name'] || 'Amazon In',
+      storeUrl: 'https://www.amazon.in',
+      offer: product.Offers || null
+    });
+
+    // Build search conditions for Amazon products
+    let amazonQuery = supabase
+      .from('amazon_products_2')
+      .select('*', { count: 'exact' });
+
+    // Build search conditions for Flipkart products
+    let flipkartQuery = supabase
+      .from('flipkart_1')
+      .select('*', { count: 'exact' });
+
+    // Apply search filters to both queries
     if (searchTerm && searchTerm.trim() !== '') {
-      // Build search conditions for multiple fields with improved search logic
-      query = query.or(
-        `Product Title.ilike.%${searchTerm}%,Product Description.ilike.%${searchTerm}%,Brand.ilike.%${searchTerm}%,Category.ilike.%${searchTerm}%`
-      );
+      amazonQuery = amazonQuery.or(`Product Title.ilike.%${searchTerm}%,Brand.ilike.%${searchTerm}%,Category.ilike.%${searchTerm}%`);
+      flipkartQuery = flipkartQuery.or(`product_name.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%`);
     }
 
-    // Apply price range filters
+    // Apply price filters
     if (minPrice !== undefined && minPrice !== null) {
-      query = query.gte('Price', minPrice);
+      amazonQuery = amazonQuery.gte('Price', minPrice);
+      flipkartQuery = flipkartQuery.filter('discounted_price', 'gte', minPrice.toString());
     }
     if (maxPrice !== undefined && maxPrice !== null) {
-      query = query.lte('Price', maxPrice);
+      amazonQuery = amazonQuery.lte('Price', maxPrice);
+      flipkartQuery = flipkartQuery.filter('discounted_price', 'lte', maxPrice.toString());
     }
 
     // Apply category filter
     if (category) {
-      query = query.eq('Category', category);
+      amazonQuery = amazonQuery.eq('Category', category);
+      // For Flipkart, we might need to search in the product_category_tree JSON
+      // This is a simplified approach
+      flipkartQuery = flipkartQuery.ilike('product_category_tree', `%${category}%`);
     }
 
     // Apply discount filter
     if (discounted) {
-      query = query.not('Mrp', 'is', null); // Products with original price higher than current price
-      query = query.gt('Mrp', 'Price');
+      amazonQuery = amazonQuery.not('Mrp', 'is', null).gt('Mrp', 'Price');
+      flipkartQuery = flipkartQuery.not('retail_price', 'is', null);
     }
 
-    // Apply sorting
-    let sortField = sortBy || 'Price';
+    // Apply pagination
+    amazonQuery = amazonQuery.range(offset, offset + limit - 1);
+    flipkartQuery = flipkartQuery.range(offset, offset + limit - 1);
+
+    // Execute both queries
+    const [amazonResult, flipkartResult] = await Promise.all([
+      amazonQuery,
+      flipkartQuery
+    ]);
+
+    if (amazonResult.error) throw amazonResult.error;
+    if (flipkartResult.error) throw flipkartResult.error;
+
+    // Transform and combine results
+    const amazonProducts = (amazonResult.data || []).map(transformAmazonProduct);
+    const flipkartProducts = (flipkartResult.data || []).map(transformFlipkartProduct);
     
-    // Map frontend sort options to database fields
-    switch (sortField) {
+    let allProducts = [...amazonProducts, ...flipkartProducts];
+
+    // Sort combined results
+    switch (sortBy) {
       case 'price-low':
-        sortField = 'Price';
-        query = query.order(sortField, { ascending: true });
+        allProducts.sort((a, b) => a.price - b.price);
         break;
       case 'price-high':
-        sortField = 'Price';
-        query = query.order(sortField, { ascending: false });
+        allProducts.sort((a, b) => b.price - a.price);
         break;
       case 'rating':
-        // Since rating is calculated randomly in the frontend, sort by price for now
-        // In a real system this would sort by an actual rating field
-        sortField = 'Price';
-        query = query.order(sortField, { ascending: true });
+        allProducts.sort((a, b) => b.rating - a.rating);
         break;
-      case 'relevance':
       default:
         // For relevance sorting, prioritize exact name matches if there's a search term
         if (searchTerm && searchTerm.trim() !== '') {
-          sortField = 'Product Title';
-        } else {
-          sortField = 'Price';
+          allProducts.sort((a, b) => {
+            const aContains = a.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const bContains = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+            if (aContains && !bContains) return -1;
+            if (!aContains && bContains) return 1;
+            return 0;
+          });
         }
-        query = query.order(sortField, { ascending: true });
     }
 
-    // Execute query
-    const { data, error, count } = await query;
+    // Slice the combined and sorted results to match the requested limit
+    allProducts = allProducts.slice(0, limit);
 
-    if (error) {
-      console.error("Database error:", error);
-      throw error;
-    }
+    const totalCount = (amazonResult.count || 0) + (flipkartResult.count || 0);
 
-    console.log(`Found ${data?.length || 0} products out of ${count || 0} total`);
+    console.log(`Found ${allProducts.length} products out of ${totalCount} total`);
 
-    if (!data || data.length === 0) {
+    if (!allProducts || allProducts.length === 0) {
       // If no products found with current search, try to find similar products
       let similarProducts = [];
       
       if (searchTerm) {
         // Try to find products with similar categories or brands
-        const { data: similarData } = await supabase
-          .from('amazon_products_2')
-          .select('*')
-          .limit(8);
+        const [amazonSimilar, flipkartSimilar] = await Promise.all([
+          supabase.from('amazon_products_2').select('*').limit(4),
+          supabase.from('flipkart_1').select('*').limit(4)
+        ]);
           
-        similarProducts = similarData || [];
+        const amazonSuggestions = (amazonSimilar.data || []).map(transformAmazonProduct);
+        const flipkartSuggestions = (flipkartSimilar.data || []).map(transformFlipkartProduct);
+        
+        similarProducts = [...amazonSuggestions, ...flipkartSuggestions];
         console.log(`Found ${similarProducts.length} similar products as suggestions`);
       }
-      
-      // Transform similar products data for frontend
-      const suggestedProducts = similarProducts.map(product => ({
-        id: product['Unique ID'] || String(Math.random()),
-        name: product['Product Title'] || 'Unknown Product',
-        price: product['Price'] || 0,
-        originalPrice: product['Mrp'] || null,
-        image: product['Image Urls'] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e',
-        rating: Math.floor(Math.random() * 2) + 3.5, // Mock rating between 3.5-5.0
-        store: product['Site Name'] || 'Unknown Store',
-        storeUrl: '#',
-        offer: product['Offers'] || null
-      }));
       
       return new Response(
         JSON.stringify({ 
           products: [], 
           total: 0, 
-          suggestedProducts
+          suggestedProducts: similarProducts
         }),
         { 
           headers: { 
@@ -165,23 +200,10 @@ serve(async (req) => {
       );
     }
 
-    // Transform data for frontend consumption
-    const products = data.map(product => ({
-      id: product['Unique ID'] || String(Math.random()),
-      name: product['Product Title'] || 'Unknown Product',
-      price: product['Price'] || 0,
-      originalPrice: product['Mrp'] || null,
-      image: product['Image Urls'] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e',
-      rating: Math.floor(Math.random() * 2) + 3.5, // Mock rating between 3.5-5.0 until we have real ratings
-      store: product['Site Name'] || 'Unknown Store',
-      storeUrl: '#',
-      offer: product['Offers'] || null
-    }));
-
-    console.log(`Returning ${products.length} products with total count ${count}`);
+    console.log(`Returning ${allProducts.length} products with total count ${totalCount}`);
 
     return new Response(
-      JSON.stringify({ products, total: count || products.length }),
+      JSON.stringify({ products: allProducts, total: totalCount }),
       { 
         headers: { 
           ...corsHeaders,
