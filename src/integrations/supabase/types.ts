@@ -123,6 +123,60 @@ export type Database = {
         }
         Relationships: []
       }
+      flipkart_1: {
+        Row: {
+          brand: string | null
+          crawl_timestamp: string | null
+          description: string | null
+          discounted_price: string | null
+          image: Json | null
+          is_FK_Advantage_product: boolean | null
+          overall_rating: string | null
+          pid: string | null
+          product_category_tree: Json | null
+          product_name: string | null
+          product_rating: string | null
+          product_specifications: string | null
+          product_url: string | null
+          retail_price: string | null
+          uniq_id: string | null
+        }
+        Insert: {
+          brand?: string | null
+          crawl_timestamp?: string | null
+          description?: string | null
+          discounted_price?: string | null
+          image?: Json | null
+          is_FK_Advantage_product?: boolean | null
+          overall_rating?: string | null
+          pid?: string | null
+          product_category_tree?: Json | null
+          product_name?: string | null
+          product_rating?: string | null
+          product_specifications?: string | null
+          product_url?: string | null
+          retail_price?: string | null
+          uniq_id?: string | null
+        }
+        Update: {
+          brand?: string | null
+          crawl_timestamp?: string | null
+          description?: string | null
+          discounted_price?: string | null
+          image?: Json | null
+          is_FK_Advantage_product?: boolean | null
+          overall_rating?: string | null
+          pid?: string | null
+          product_category_tree?: Json | null
+          product_name?: string | null
+          product_rating?: string | null
+          product_specifications?: string | null
+          product_url?: string | null
+          retail_price?: string | null
+          uniq_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
