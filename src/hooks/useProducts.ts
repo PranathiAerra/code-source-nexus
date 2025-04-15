@@ -22,20 +22,17 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
   const [totalItems, setTotalItems] = useState(0);
   const [lastSearchTime, setLastSearchTime] = useState(Date.now());
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const transformProductData = (dbProduct: any): Product => ({
-    id: dbProduct['Unique ID'] || String(Math.random()),
-    name: dbProduct['Product Title'] || 'Unknown Product',
-    price: dbProduct['Price'] || 0,
-    originalPrice: dbProduct['Mrp'] || null,
-    image: dbProduct['Image Urls'] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e',
-    rating: Math.floor(Math.random() * 2) + 3.5,
-    store: dbProduct['Site Name'] || 'Unknown Store',
-    storeUrl: '#',
-    offer: dbProduct['Offers'] || null
-  });
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchProducts = async () => {
+    // Cancel any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+    
     setLoading(true);
     setError(null);
     setLastSearchTime(Date.now());
@@ -45,122 +42,54 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
       const itemsPerPage = 12;
       const offset = (currentPage - 1) * itemsPerPage;
       
-      let sortBy = "Price";
-      let sortOrder = "asc";
+      // Call the Supabase edge function
+      const { data, error } = await supabase.functions.invoke('search-products', {
+        body: {
+          searchTerm: searchQuery,
+          minPrice: priceRange.min,
+          maxPrice: priceRange.max,
+          sortBy: sortOption,
+          sortOrder: sortOption === 'price-high' ? 'desc' : 'asc',
+          limit: itemsPerPage,
+          offset: offset,
+          discounted: false, // Can be made dynamic based on UI filters
+        },
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Failed to fetch products");
+      }
+
+      console.log("Edge function response:", data);
       
-      switch (sortOption) {
-        case "price-low":
-          sortBy = "Price";
-          sortOrder = "asc";
-          break;
-        case "price-high":
-          sortBy = "Price";
-          sortOrder = "desc";
-          break;
-        case "rating":
-          sortBy = "rating";
-          sortOrder = "desc";
-          break;
-        default:
-          sortBy = "Price";
-          sortOrder = "asc";
+      if (data.error) {
+        console.error("Search API error:", data.error);
+        throw new Error(data.error);
       }
 
-      // First, let's fetch a few products to see if we're getting any data
-      const initialQuery = supabase
-        .from('amazon_products_2')
-        .select('*')
-        .limit(5);
-      
-      const { data: initialData, error: initialError } = await initialQuery;
-      
-      if (initialError) {
-        console.error("Initial query error:", initialError);
-        throw initialError;
-      }
-      
-      console.log("Initial data check:", initialData ? initialData.length : 0, "products found");
-
-      // Now proceed with the actual filtered query
-      let queryBuilder = supabase
-        .from('amazon_products_2')
-        .select('*', { count: 'exact' });
-
-      if (searchQuery && searchQuery.trim() !== '') {
-        queryBuilder = queryBuilder.ilike('Product Title', `%${searchQuery}%`);
-      }
-
-      if (priceRange.min !== null) {
-        queryBuilder = queryBuilder.gte('Price', priceRange.min);
-      }
-      if (priceRange.max !== null) {
-        queryBuilder = queryBuilder.lte('Price', priceRange.max);
-      }
-
-      // Apply sorting
-      queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder === 'asc' });
-      
-      // Apply pagination
-      queryBuilder = queryBuilder.range(offset, offset + itemsPerPage - 1);
-
-      const { data: products, error: dbError, count } = await queryBuilder;
-
-      if (dbError) {
-        console.error("Main query error:", dbError);
-        throw dbError;
-      }
-
-      console.log(`Query returned ${products?.length || 0} products out of ${count || 0} total`);
-
-      if (!products || products.length === 0) {
-        // If no products found with current search, try to find similar products
-        let similarProducts = [];
-        
-        if (searchQuery) {
-          // Try to find products with similar category
-          const { data: categoryData } = await supabase
-            .from('amazon_products_2')
-            .select('Category')
-            .limit(1);
-            
-          if (categoryData && categoryData.length > 0 && categoryData[0].Category) {
-            const { data: similarData } = await supabase
-              .from('amazon_products_2')
-              .select('*')
-              .limit(4);
-              
-            similarProducts = similarData || [];
-          } else {
-            // If no categories found, just get some random products
-            const { data: randomData } = await supabase
-              .from('amazon_products_2')
-              .select('*')
-              .limit(4);
-              
-            similarProducts = randomData || [];
-          }
-        } else {
-          // If no search query, just get some products
-          const { data: defaultData } = await supabase
-            .from('amazon_products_2')
-            .select('*')
-            .limit(12);
-            
-          similarProducts = defaultData || [];
-        }
-
-        setProducts([]);
-        setSuggestedProducts(similarProducts.map(product => transformProductData(product)));
-        setTotalItems(0);
+      if (data.products) {
+        setProducts(data.products);
+        setTotalItems(data.total || data.products.length);
       } else {
-        setProducts(products.map(product => transformProductData(product)));
-        setTotalItems(count || products.length);
+        setProducts([]);
+        setTotalItems(0);
+      }
+
+      if (data.suggestedProducts) {
+        setSuggestedProducts(data.suggestedProducts);
+      } else {
         setSuggestedProducts([]);
       }
-    } catch (err) {
-      console.error("Error fetching products:", err);
-      setError("Failed to fetch products. Please try again later.");
-      toast.error("Failed to fetch products");
+      
+    } catch (err: any) {
+      // Don't set error if it was due to request abortion
+      if (err.name !== 'AbortError') {
+        console.error("Error fetching products:", err);
+        setError("Failed to fetch products. Please try again later.");
+        toast.error("Failed to fetch products");
+      }
     } finally {
       setLoading(false);
     }
@@ -169,20 +98,25 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
   useEffect(() => {
     fetchProducts();
     
+    // Clean up previous timer if it exists
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
     }
     
+    // Set up timer to auto-refresh results
     refreshIntervalRef.current = setInterval(() => {
-      if (Date.now() - lastSearchTime > 5000) {
+      if (Date.now() - lastSearchTime > 30000) { // 30 seconds
         console.log("Auto-refreshing search results");
         fetchProducts();
       }
-    }, 5000);
+    }, 30000); // Check every 30 seconds
     
     return () => {
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
+      }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
     };
   }, [searchQuery, sortOption, currentPage, priceRange.min, priceRange.max]);

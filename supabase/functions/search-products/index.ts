@@ -20,32 +20,96 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Parse request
-    const { searchTerm, minPrice, maxPrice, sortBy, sortOrder, limit = 20, offset = 0 } = await req.json();
+    const { 
+      searchTerm, 
+      minPrice, 
+      maxPrice, 
+      sortBy, 
+      sortOrder, 
+      limit = 20, 
+      offset = 0,
+      category = null,
+      featured = false,
+      discounted = false,
+      topRated = false
+    } = await req.json();
 
-    console.log("Search request:", { searchTerm, minPrice, maxPrice, sortBy, sortOrder, limit, offset });
+    console.log("Search parameters:", JSON.stringify({
+      searchTerm,
+      minPrice,
+      maxPrice,
+      sortBy,
+      sortOrder,
+      limit,
+      offset,
+      category,
+      featured,
+      discounted,
+      topRated
+    }, null, 2));
 
-    // Start with base query for amazon_products_2 (numeric price values)
+    // Start with base query for amazon_products_2
     let query = supabase
       .from('amazon_products_2')
       .select('*', { count: 'exact' })
       .limit(limit)
-      .range(offset, offset + limit - 1)
-      .order(sortBy || 'Price', { ascending: sortOrder === 'asc' });
+      .range(offset, offset + limit - 1);
 
-    // Apply search filter if provided using more comprehensive search across multiple fields
+    // Apply search filter if provided using more comprehensive search
     if (searchTerm && searchTerm.trim() !== '') {
-      // Build search conditions for multiple fields
+      // Build search conditions for multiple fields with improved search logic
       query = query.or(
         `Product Title.ilike.%${searchTerm}%,Product Description.ilike.%${searchTerm}%,Brand.ilike.%${searchTerm}%,Category.ilike.%${searchTerm}%`
       );
     }
 
-    // Apply price range filters if provided
+    // Apply price range filters
     if (minPrice !== undefined && minPrice !== null) {
       query = query.gte('Price', minPrice);
     }
     if (maxPrice !== undefined && maxPrice !== null) {
       query = query.lte('Price', maxPrice);
+    }
+
+    // Apply category filter
+    if (category) {
+      query = query.eq('Category', category);
+    }
+
+    // Apply discount filter
+    if (discounted) {
+      query = query.not('Mrp', 'is', null); // Products with original price higher than current price
+      query = query.gt('Mrp', 'Price');
+    }
+
+    // Apply sorting
+    let sortField = sortBy || 'Price';
+    
+    // Map frontend sort options to database fields
+    switch (sortField) {
+      case 'price-low':
+        sortField = 'Price';
+        query = query.order(sortField, { ascending: true });
+        break;
+      case 'price-high':
+        sortField = 'Price';
+        query = query.order(sortField, { ascending: false });
+        break;
+      case 'rating':
+        // Since rating is calculated randomly in the frontend, sort by price for now
+        // In a real system this would sort by an actual rating field
+        sortField = 'Price';
+        query = query.order(sortField, { ascending: true });
+        break;
+      case 'relevance':
+      default:
+        // For relevance sorting, prioritize exact name matches if there's a search term
+        if (searchTerm && searchTerm.trim() !== '') {
+          sortField = 'Product Title';
+        } else {
+          sortField = 'Price';
+        }
+        query = query.order(sortField, { ascending: true });
     }
 
     // Execute query
@@ -60,26 +124,17 @@ serve(async (req) => {
 
     if (!data || data.length === 0) {
       // If no products found with current search, try to find similar products
-      // based on category if searchTerm contains any category information
       let similarProducts = [];
       
       if (searchTerm) {
-        // Try to find products with similar category
-        const { data: categoryData } = await supabase
+        // Try to find products with similar categories or brands
+        const { data: similarData } = await supabase
           .from('amazon_products_2')
-          .select('Category')
-          .ilike('Product Title', `%${searchTerm}%`)
-          .limit(1);
+          .select('*')
+          .limit(8);
           
-        if (categoryData && categoryData.length > 0 && categoryData[0].Category) {
-          const { data: similarData } = await supabase
-            .from('amazon_products_2')
-            .select('*')
-            .eq('Category', categoryData[0].Category)
-            .limit(4);
-            
-          similarProducts = similarData || [];
-        }
+        similarProducts = similarData || [];
+        console.log(`Found ${similarProducts.length} similar products as suggestions`);
       }
       
       // Transform similar products data for frontend

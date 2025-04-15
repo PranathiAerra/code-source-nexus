@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -26,6 +26,16 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
   const [priceRange, setPriceRange] = useState<[number]>([10000]);
   const maxPriceValue = 50000;
 
+  // Update min/max price inputs when slider changes
+  const handleSliderChange = (value: number[]) => {
+    setPriceRange([value[0]]);
+    setMaxPrice(String(value[0]));
+    if (onPriceFilterChange) {
+      onPriceFilterChange(0, value[0]);
+    }
+  };
+
+  // Apply manual price inputs
   const handlePriceFilter = () => {
     if (onPriceFilterChange) {
       const min = minPrice ? parseFloat(minPrice) : null;
@@ -34,11 +44,13 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
     }
   };
 
-  const handleSliderChange = (value: number[]) => {
-    setPriceRange([value[0]]);
-    setMaxPrice(String(value[0]));
+  // Reset all filters
+  const handleResetFilters = () => {
+    setMinPrice("");
+    setMaxPrice("");
+    setPriceRange([10000]);
     if (onPriceFilterChange) {
-      onPriceFilterChange(0, value[0]);
+      onPriceFilterChange(null, null);
     }
   };
 
@@ -124,14 +136,7 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
           variant="outline" 
           size="sm"
           className="flex items-center"
-          onClick={() => {
-            setMinPrice("");
-            setMaxPrice("");
-            setPriceRange([10000]);
-            if (onPriceFilterChange) {
-              onPriceFilterChange(null, null);
-            }
-          }}
+          onClick={handleResetFilters}
         >
           <SlidersHorizontal className="h-4 w-4 mr-1" />
           Reset

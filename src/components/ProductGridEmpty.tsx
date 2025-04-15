@@ -15,7 +15,7 @@ const ProductGridEmpty = ({ onRefresh }: ProductGridEmptyProps) => {
       </div>
       <p className="text-xl text-gray-600 mb-2">No products found</p>
       <p className="text-gray-500 mb-6 max-w-md mx-auto">
-        We couldn't find any products matching your criteria. Try adjusting your search or filter settings.
+        We couldn't find any products matching your criteria. Try adjusting your search terms or filter settings.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
         <Button onClick={onRefresh} className="flex items-center">
