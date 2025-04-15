@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Star, IndianRupee } from "lucide-react";
@@ -21,11 +20,16 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
+  const [imageError, setImageError] = useState(false);
+  
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
-  // Generate stars based on rating
   const renderRating = () => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
@@ -42,7 +46,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
     return stars;
   };
 
-  // Format price to Indian Rupees
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
       maximumFractionDigits: 2,
@@ -54,9 +57,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <Card className="overflow-hidden h-full flex flex-col transition-shadow hover:shadow-lg">
       <div className="aspect-square relative overflow-hidden bg-gray-100">
         <img
-          src={product.image}
+          src={imageError ? 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e' : product.image}
           alt={product.name}
           className="object-contain h-full w-full p-4"
+          onError={handleImageError}
         />
         {product.offer && (
           <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">

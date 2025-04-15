@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import ProductCard, { Product } from "./ProductCard";
 import FilterBar from "./FilterBar";
@@ -30,7 +29,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
   const itemsPerPage = 12;
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to fetch products with all parameters
   const fetchProducts = async (
     query: string, 
     sortOpt = sortOption, 
@@ -46,7 +44,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
       console.log(`Fetching products. Query: "${query}", Sort: ${sortOpt}, Page: ${page}, Price range: ${minPrice}-${maxPrice}`);
       const offset = (page - 1) * itemsPerPage;
       
-      // Determine sort parameters
       let sortBy = "Price";
       let sortOrder = "asc";
       
@@ -68,38 +65,56 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
           sortOrder = "asc";
       }
 
-      // Call our Supabase Edge Function
-      const { data, error } = await supabase.functions.invoke("search-products", {
-        body: {
-          searchTerm: query,
-          minPrice,
-          maxPrice,
-          sortBy,
-          sortOrder,
-          limit: itemsPerPage,
-          offset
-        }
-      });
+      let queryBuilder = supabase
+        .from('amazon_products_2')
+        .select('*', { count: 'exact' })
+        .range(offset, offset + itemsPerPage - 1)
+        .order(sortBy, { ascending: sortOrder === 'asc' });
 
-      if (error) {
-        throw new Error(error.message || "Failed to fetch products");
+      if (query && query.trim() !== '') {
+        queryBuilder = queryBuilder.or(
+          `Product Title.ilike.%${query}%,Product Description.ilike.%${query}%,Brand.ilike.%${query}%,Category.ilike.%${query}%`
+        );
       }
 
-      console.log("API Response:", data);
+      if (minPrice !== null) {
+        queryBuilder = queryBuilder.gte('Price', minPrice);
+      }
+      if (maxPrice !== null) {
+        queryBuilder = queryBuilder.lte('Price', maxPrice);
+      }
 
-      if (data?.products) {
-        setProducts(data.products);
-        setTotalItems(data.total || data.products.length);
+      const { data: products, error: dbError, count } = await queryBuilder;
+
+      if (dbError) throw dbError;
+
+      if (!products || products.length === 0) {
+        let similarProducts = [];
         
-        // Handle suggested products if no results found
-        if (data.suggestedProducts && data.products.length === 0) {
-          setSuggestedProducts(data.suggestedProducts);
-        } else {
-          setSuggestedProducts([]);
+        if (query) {
+          const { data: categoryData } = await supabase
+            .from('amazon_products_2')
+            .select('Category')
+            .ilike('Product Title', `%${query}%`)
+            .limit(1);
+            
+          if (categoryData && categoryData.length > 0 && categoryData[0].Category) {
+            const { data: similarData } = await supabase
+              .from('amazon_products_2')
+              .select('*')
+              .eq('Category', categoryData[0].Category)
+              .limit(4);
+              
+            similarProducts = similarData || [];
+          }
         }
-      } else {
+
         setProducts([]);
+        setSuggestedProducts(similarProducts.map(product => transformProductData(product)));
         setTotalItems(0);
+      } else {
+        setProducts(products.map(product => transformProductData(product)));
+        setTotalItems(count || products.length);
         setSuggestedProducts([]);
       }
     } catch (err) {
@@ -111,19 +126,27 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
     }
   };
 
-  // Handle search query changes
+  const transformProductData = (dbProduct: any): Product => ({
+    id: dbProduct['Unique ID'] || String(Math.random()),
+    name: dbProduct['Product Title'] || 'Unknown Product',
+    price: dbProduct['Price'] || 0,
+    originalPrice: dbProduct['Mrp'] || null,
+    image: dbProduct['Image Urls'] || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e',
+    rating: Math.floor(Math.random() * 2) + 3.5,
+    store: dbProduct['Site Name'] || 'Unknown Store',
+    storeUrl: '#',
+    offer: dbProduct['Offers'] || null
+  });
+
   useEffect(() => {
-    setCurrentPage(1); // Reset to first page on new search
+    setCurrentPage(1);
     fetchProducts(searchQuery);
     
-    // Clear any existing refresh interval
     if (refreshIntervalRef.current) {
       clearInterval(refreshIntervalRef.current);
     }
     
-    // Set up automatic refresh every 5 seconds as fallback
     refreshIntervalRef.current = setInterval(() => {
-      // Only refresh if the last search was more than 5 seconds ago
       if (Date.now() - lastSearchTime > 5000) {
         console.log("Auto-refreshing search results");
         fetchProducts(searchQuery, sortOption, currentPage, priceRange.min, priceRange.max);
@@ -137,74 +160,59 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
     };
   }, [searchQuery]);
 
-  // Handle sorting
   const handleSortChange = (sortOpt: string) => {
     setSortOption(sortOpt);
     fetchProducts(searchQuery, sortOpt, currentPage);
   };
 
-  // Handle price filtering
   const handlePriceFilterChange = (min: number | null, max: number | null) => {
     setPriceRange({ min, max });
-    fetchProducts(searchQuery, sortOption, 1, min, max); // Reset to first page with new filters
+    fetchProducts(searchQuery, sortOption, 1, min, max);
     setCurrentPage(1);
   };
 
-  // Handle pagination
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     fetchProducts(searchQuery, sortOption, page, priceRange.min, priceRange.max);
   };
 
-  // Handle manual refresh
   const handleRefresh = () => {
     fetchProducts(searchQuery, sortOption, currentPage, priceRange.min, priceRange.max);
   };
 
-  // Calculate total pages
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
-  // Generate page numbers
   const getPageNumbers = () => {
     const pages = [];
     const maxPagesToShow = 5;
     
     if (totalPages <= maxPagesToShow) {
-      // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
     } else {
-      // Always include first page
       pages.push(1);
       
-      // Calculate start and end of the middle section
       let start = Math.max(2, currentPage - 1);
       let end = Math.min(totalPages - 1, currentPage + 1);
       
-      // Adjust start and end to ensure we show enough pages
       if (start === 2) end = Math.min(totalPages - 1, start + 2);
       if (end === totalPages - 1) start = Math.max(2, end - 2);
       
-      // Add ellipsis after first page if needed
-      if (start > 2) pages.push(-1); // -1 represents ellipsis
+      if (start > 2) pages.push(-1);
       
-      // Add middle pages
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
       
-      // Add ellipsis before last page if needed
-      if (end < totalPages - 1) pages.push(-2); // -2 represents ellipsis
+      if (end < totalPages - 1) pages.push(-2);
       
-      // Always include last page if more than 1 page
       if (totalPages > 1) pages.push(totalPages);
     }
     
     return pages;
   };
 
-  // Loading skeleton
   const renderSkeletons = () => {
     return Array(itemsPerPage).fill(0).map((_, i) => (
       <div key={i} className="flex flex-col h-full">
@@ -228,7 +236,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
         onPriceFilterChange={handlePriceFilterChange}
       />
       
-      {/* Error state */}
       {error && (
         <Alert variant="destructive" className="my-6">
           <AlertCircle className="h-4 w-4" />
@@ -245,7 +252,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
         </Alert>
       )}
       
-      {/* Loading state */}
       {loading ? (
         <div>
           <div className="flex justify-center my-4">
@@ -256,7 +262,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
           </div>
         </div>
       ) : products.length === 0 && suggestedProducts.length === 0 ? (
-        // No products found state
         <div className="text-center py-10">
           <div className="mb-6">
             <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
@@ -272,7 +277,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
         </div>
       ) : (
         <>
-          {/* Main product results */}
           {products.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product) => (
@@ -281,7 +285,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
             </div>
           )}
           
-          {/* Suggested products when main results are empty */}
           {products.length === 0 && suggestedProducts.length > 0 && (
             <div>
               <div className="text-center py-6">
@@ -298,7 +301,6 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
             </div>
           )}
           
-          {/* Pagination */}
           {products.length > 0 && totalPages > 1 && (
             <Pagination className="my-10">
               <PaginationContent>
