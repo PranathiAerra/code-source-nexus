@@ -1,0 +1,5 @@
+
+project_id = "vfzyuyeqttdcupalkgfv"
+
+[functions.search-products]
+verify_jwt = false
