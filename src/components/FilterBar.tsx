@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { IndianRupee, SlidersHorizontal } from "lucide-react";
 
 type SortOption = "relevance" | "price-low" | "price-high" | "rating";
 
@@ -22,8 +23,8 @@ interface FilterBarProps {
 const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBarProps) => {
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
-  const [priceRange, setPriceRange] = useState<[number]>([1000]);
-  const maxPriceValue = 5000;
+  const [priceRange, setPriceRange] = useState<[number]>([10000]);
+  const maxPriceValue = 50000;
 
   const handlePriceFilter = () => {
     if (onPriceFilterChange) {
@@ -70,21 +71,27 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
         
         <div className="grid grid-cols-2 gap-2 items-center">
           <div className="flex items-center space-x-2">
-            <Input
-              type="number"
-              placeholder="Min $"
-              className="w-20"
-              value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
-            />
+            <div className="relative">
+              <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                type="number"
+                placeholder="Min"
+                className="pl-8 w-24"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+              />
+            </div>
             <span className="text-gray-600">to</span>
-            <Input
-              type="number"
-              placeholder="Max $"
-              className="w-20"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-            />
+            <div className="relative">
+              <IndianRupee className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Input
+                type="number"
+                placeholder="Max"
+                className="pl-8 w-24"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+              />
+            </div>
           </div>
           
           <Button 
@@ -98,14 +105,37 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
         </div>
 
         <div className="flex flex-col w-full md:w-48 lg:w-36">
-          <span className="text-xs text-gray-600 mb-1">Max price: ${priceRange[0]}</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-600">Max price:</span>
+            <div className="flex items-center text-xs font-medium">
+              <IndianRupee className="h-3 w-3 mr-0.5" />
+              <span>{priceRange[0].toLocaleString('en-IN')}</span>
+            </div>
+          </div>
           <Slider
-            defaultValue={[1000]}
+            defaultValue={[10000]}
             max={maxPriceValue}
-            step={100}
+            step={1000}
             onValueChange={handleSliderChange}
           />
         </div>
+
+        <Button 
+          variant="outline" 
+          size="sm"
+          className="flex items-center"
+          onClick={() => {
+            setMinPrice("");
+            setMaxPrice("");
+            setPriceRange([10000]);
+            if (onPriceFilterChange) {
+              onPriceFilterChange(null, null);
+            }
+          }}
+        >
+          <SlidersHorizontal className="h-4 w-4 mr-1" />
+          Reset
+        </Button>
       </div>
     </div>
   );

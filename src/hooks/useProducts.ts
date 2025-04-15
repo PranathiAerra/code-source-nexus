@@ -66,16 +66,28 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
           sortOrder = "asc";
       }
 
+      // First, let's fetch a few products to see if we're getting any data
+      const initialQuery = supabase
+        .from('amazon_products_2')
+        .select('*')
+        .limit(5);
+      
+      const { data: initialData, error: initialError } = await initialQuery;
+      
+      if (initialError) {
+        console.error("Initial query error:", initialError);
+        throw initialError;
+      }
+      
+      console.log("Initial data check:", initialData ? initialData.length : 0, "products found");
+
+      // Now proceed with the actual filtered query
       let queryBuilder = supabase
         .from('amazon_products_2')
-        .select('*', { count: 'exact' })
-        .range(offset, offset + itemsPerPage - 1)
-        .order(sortBy, { ascending: sortOrder === 'asc' });
+        .select('*', { count: 'exact' });
 
       if (searchQuery && searchQuery.trim() !== '') {
-        queryBuilder = queryBuilder.or(
-          `Product Title.ilike.%${searchQuery}%,Product Description.ilike.%${searchQuery}%,Brand.ilike.%${searchQuery}%,Category.ilike.%${searchQuery}%`
-        );
+        queryBuilder = queryBuilder.ilike('Product Title', `%${searchQuery}%`);
       }
 
       if (priceRange.min !== null) {
@@ -85,29 +97,56 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
         queryBuilder = queryBuilder.lte('Price', priceRange.max);
       }
 
+      // Apply sorting
+      queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder === 'asc' });
+      
+      // Apply pagination
+      queryBuilder = queryBuilder.range(offset, offset + itemsPerPage - 1);
+
       const { data: products, error: dbError, count } = await queryBuilder;
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Main query error:", dbError);
+        throw dbError;
+      }
+
+      console.log(`Query returned ${products?.length || 0} products out of ${count || 0} total`);
 
       if (!products || products.length === 0) {
+        // If no products found with current search, try to find similar products
         let similarProducts = [];
         
         if (searchQuery) {
+          // Try to find products with similar category
           const { data: categoryData } = await supabase
             .from('amazon_products_2')
             .select('Category')
-            .ilike('Product Title', `%${searchQuery}%`)
             .limit(1);
             
           if (categoryData && categoryData.length > 0 && categoryData[0].Category) {
             const { data: similarData } = await supabase
               .from('amazon_products_2')
               .select('*')
-              .eq('Category', categoryData[0].Category)
               .limit(4);
               
             similarProducts = similarData || [];
+          } else {
+            // If no categories found, just get some random products
+            const { data: randomData } = await supabase
+              .from('amazon_products_2')
+              .select('*')
+              .limit(4);
+              
+            similarProducts = randomData || [];
           }
+        } else {
+          // If no search query, just get some products
+          const { data: defaultData } = await supabase
+            .from('amazon_products_2')
+            .select('*')
+            .limit(12);
+            
+          similarProducts = defaultData || [];
         }
 
         setProducts([]);
