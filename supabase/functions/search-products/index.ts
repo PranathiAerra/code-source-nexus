@@ -61,7 +61,7 @@ serve(async (req) => {
       store: 'Flipkart',
       storeUrl: 'https://www.flipkart.com',
       offer: product.discounted_price && product.retail_price 
-        ? `${Math.round(((parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) - parseFloat(product.discounted_price.replace(/[^0-9.]/g, ''))) / parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) * 100)}`
+        ? `${Math.round(((parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) - parseFloat(product.discounted_price.replace(/[^0-9.]/g, ''))) / parseFloat(product.retail_price.replace(/[^0-9.]/g, ''))) * 100)}`
         : null
     });
 
