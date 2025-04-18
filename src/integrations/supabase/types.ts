@@ -9,42 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      amazon_electronics: {
-        Row: {
-          actual_price: string | null
-          discount_price: string | null
-          image: string | null
-          link: string | null
-          main_category: string | null
-          name: string | null
-          no_of_ratings: string | null
-          ratings: string | null
-          sub_category: string | null
-        }
-        Insert: {
-          actual_price?: string | null
-          discount_price?: string | null
-          image?: string | null
-          link?: string | null
-          main_category?: string | null
-          name?: string | null
-          no_of_ratings?: string | null
-          ratings?: string | null
-          sub_category?: string | null
-        }
-        Update: {
-          actual_price?: string | null
-          discount_price?: string | null
-          image?: string | null
-          link?: string | null
-          main_category?: string | null
-          name?: string | null
-          no_of_ratings?: string | null
-          ratings?: string | null
-          sub_category?: string | null
-        }
-        Relationships: []
-      }
       amazon_products_1: {
         Row: {
           Brand: string | null

@@ -27,9 +27,30 @@ const ProductCard = ({ product }: ProductCardProps) => {
     setImageError(true);
   };
 
-  const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+  // Helper function to clean and validate image URL
+  const getValidImageUrl = (imageUrl: string): string => {
+    try {
+      // Handle JSON string arrays
+      if (imageUrl.startsWith('[')) {
+        const urls = JSON.parse(imageUrl);
+        return Array.isArray(urls) && urls.length > 0 ? urls[0] : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+      }
+      
+      // Handle pipe-separated URLs (from Amazon dataset)
+      if (imageUrl.includes('|')) {
+        return imageUrl.split('|')[0];
+      }
+      
+      return imageUrl;
+    } catch (e) {
+      return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+    }
+  };
 
-  const discount = product.originalPrice
+  const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+  const imageUrl = imageError ? fallbackImage : getValidImageUrl(product.image);
+
+  const discount = product.originalPrice && product.originalPrice > product.price
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
@@ -60,7 +81,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
     <Card className="overflow-hidden h-full flex flex-col transition-shadow hover:shadow-lg">
       <div className="aspect-square relative overflow-hidden bg-gray-100">
         <img
-          src={imageError ? fallbackImage : product.image}
+          src={imageUrl}
           alt={product.name}
           className="object-contain h-full w-full p-4"
           onError={handleImageError}
