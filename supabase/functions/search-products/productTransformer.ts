@@ -28,7 +28,7 @@ export const transformProduct = {
     offer: product.discounted_price && product.retail_price ? 
       `${Math.round(((parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) - 
       parseFloat(product.discounted_price.replace(/[^0-9.]/g, ''))) / 
-      parseFloat(product.retail_price.replace(/[^0-9.]/g, '')) * 100)}%` : null
+      parseFloat(product.retail_price.replace(/[^0-9.]/g, ''))) * 100)}%` : null
   }),
 
   fashion: (product: any) => ({
