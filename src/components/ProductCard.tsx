@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,16 +26,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
     setImageError(true);
   };
 
-  // Helper function to clean and validate image URL
   const getValidImageUrl = (imageUrl: string): string => {
     try {
-      // Handle JSON string arrays
       if (imageUrl.startsWith('[')) {
         const urls = JSON.parse(imageUrl);
         return Array.isArray(urls) && urls.length > 0 ? urls[0] : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
       }
       
-      // Handle pipe-separated URLs (from Amazon dataset)
       if (imageUrl.includes('|')) {
         return imageUrl.split('|')[0];
       }

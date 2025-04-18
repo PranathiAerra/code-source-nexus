@@ -14,7 +14,7 @@ export async function handleSearchQueries(
   supabase: any,
   params: SearchParams
 ): Promise<SearchResult> {
-  console.log("Building queries for search params:", JSON.stringify(params));
+  console.log("Building queries for search params:", JSON.stringify(params, null, 2));
   const queries = buildQueries(supabase, params);
   console.log(`Executing ${queries.length} queries across product sources`);
   const results = await Promise.all(queries);

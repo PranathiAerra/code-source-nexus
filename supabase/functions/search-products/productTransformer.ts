@@ -1,10 +1,55 @@
-
 const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+
+// Helper function to clean and validate image URLs
+const cleanImageUrl = (imageUrl: string | null): string => {
+  const fallbackImage = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+  
+  try {
+    if (!imageUrl) return fallbackImage;
+
+    // Handle JSON string arrays
+    if (imageUrl.startsWith('[')) {
+      try {
+        const urls = JSON.parse(imageUrl);
+        return Array.isArray(urls) && urls.length > 0 ? urls[0] : fallbackImage;
+      } catch {
+        return fallbackImage;
+      }
+    }
+
+    // Handle pipe-separated URLs (from Amazon dataset)
+    if (imageUrl.includes('|')) {
+      const urls = imageUrl.split('|');
+      return urls[0] || fallbackImage;
+    }
+
+    // Handle JSONB format (from Flipkart dataset)
+    if (typeof imageUrl === 'object') {
+      const values = Object.values(imageUrl);
+      return values.length > 0 && typeof values[0] === 'string' ? values[0] : fallbackImage;
+    }
+
+    // Handle base64 images
+    if (imageUrl.startsWith('data:image')) {
+      return imageUrl;
+    }
+
+    // Handle relative URLs
+    if (imageUrl.startsWith('/')) {
+      return `https://example.com${imageUrl}`;
+    }
+
+    return imageUrl;
+  } catch (error) {
+    console.error('Error processing image URL:', error);
+    return fallbackImage;
+  }
+};
 
 export const transformProduct = {
   amazon: (product: any) => {
     try {
-      const imageUrl = product['Image Urls'] || fallbackImage;
+      const imageUrl = cleanImageUrl(product['Image Urls']);
       console.log(`Amazon image URL: ${imageUrl.substring(0, 100)}${imageUrl.length > 100 ? '...' : ''}`);
       
       return {
@@ -36,27 +81,7 @@ export const transformProduct = {
 
   flipkart: (product: any) => {
     try {
-      // Handle Flipkart image which could be a JSON string array or direct string
-      let imageUrl = fallbackImage;
-      
-      if (product.image) {
-        if (typeof product.image === 'string') {
-          // Try to parse if it's a JSON string
-          try {
-            const parsed = JSON.parse(product.image);
-            imageUrl = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : fallbackImage;
-          } catch {
-            imageUrl = product.image;
-          }
-        } else if (Array.isArray(product.image)) {
-          imageUrl = product.image[0] || fallbackImage;
-        } else if (typeof product.image === 'object') {
-          // It might already be parsed as an object by Supabase
-          const values = Object.values(product.image);
-          imageUrl = values.length > 0 && typeof values[0] === 'string' ? values[0] : fallbackImage;
-        }
-      }
-      
+      const imageUrl = cleanImageUrl(product.image);
       console.log(`Flipkart image URL: ${imageUrl.substring(0, 100)}${imageUrl.length > 100 ? '...' : ''}`);
       
       return {
@@ -91,7 +116,7 @@ export const transformProduct = {
 
   fashion: (product: any) => {
     try {
-      const imageUrl = product.img || fallbackImage;
+      const imageUrl = cleanImageUrl(product.img);
       console.log(`Fashion image URL: ${imageUrl.substring(0, 100)}${imageUrl.length > 100 ? '...' : ''}`);
       
       return {
