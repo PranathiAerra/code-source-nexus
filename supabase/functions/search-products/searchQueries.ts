@@ -36,7 +36,7 @@ export async function handleSearchQueries(
     allProducts = allProducts.filter(p => p.price <= params.maxPrice);
   }
 
-  // Sort combined results
+  // Sort combined results with reduced relevance boost (10%)
   sortProducts(allProducts, params);
 
   // Slice to match requested limit
@@ -86,10 +86,13 @@ function sortProducts(products: any[], params: SearchParams) {
     default:
       if (params.searchTerm && params.searchTerm.trim() !== '') {
         products.sort((a, b) => {
-          const aContains = a.name.toLowerCase().includes(params.searchTerm.toLowerCase());
-          const bContains = b.name.toLowerCase().includes(params.searchTerm.toLowerCase());
-          if (aContains && !bContains) return -1;
-          if (!aContains && bContains) return 1;
+          const searchTerm = params.searchTerm.toLowerCase();
+          const aMatch = a.name.toLowerCase().includes(searchTerm);
+          const bMatch = b.name.toLowerCase().includes(searchTerm);
+          
+          // Reduce relevance boost from 100% to 10%
+          if (aMatch && !bMatch) return -0.1;
+          if (!aMatch && bMatch) return 0.1;
           return 0;
         });
       }
