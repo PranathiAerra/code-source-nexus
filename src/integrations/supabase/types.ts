@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      amazon_electronics: {
+        Row: {
+          actual_price: string | null
+          discount_price: string | null
+          image: string | null
+          link: string | null
+          main_category: string | null
+          name: string | null
+          no_of_ratings: string | null
+          ratings: string | null
+          sub_category: string | null
+        }
+        Insert: {
+          actual_price?: string | null
+          discount_price?: string | null
+          image?: string | null
+          link?: string | null
+          main_category?: string | null
+          name?: string | null
+          no_of_ratings?: string | null
+          ratings?: string | null
+          sub_category?: string | null
+        }
+        Update: {
+          actual_price?: string | null
+          discount_price?: string | null
+          image?: string | null
+          link?: string | null
+          main_category?: string | null
+          name?: string | null
+          no_of_ratings?: string | null
+          ratings?: string | null
+          sub_category?: string | null
+        }
+        Relationships: []
+      }
       amazon_products_1: {
         Row: {
           Brand: string | null
@@ -123,7 +159,100 @@ export type Database = {
         }
         Relationships: []
       }
+      fashion_1: {
+        Row: {
+          avg_rating: string | null
+          brand: string | null
+          colour: string | null
+          description: string | null
+          img: string | null
+          name: string | null
+          p_attributes: string | null
+          p_id: number | null
+          price: number | null
+          ratingCount: string | null
+        }
+        Insert: {
+          avg_rating?: string | null
+          brand?: string | null
+          colour?: string | null
+          description?: string | null
+          img?: string | null
+          name?: string | null
+          p_attributes?: string | null
+          p_id?: number | null
+          price?: number | null
+          ratingCount?: string | null
+        }
+        Update: {
+          avg_rating?: string | null
+          brand?: string | null
+          colour?: string | null
+          description?: string | null
+          img?: string | null
+          name?: string | null
+          p_attributes?: string | null
+          p_id?: number | null
+          price?: number | null
+          ratingCount?: string | null
+        }
+        Relationships: []
+      }
       flipkart_1: {
+        Row: {
+          brand: string | null
+          crawl_timestamp: string | null
+          description: string | null
+          discounted_price: string | null
+          image: Json | null
+          is_FK_Advantage_product: boolean | null
+          overall_rating: string | null
+          pid: string | null
+          product_category_tree: Json | null
+          product_name: string | null
+          product_rating: string | null
+          product_specifications: string | null
+          product_url: string | null
+          retail_price: string | null
+          uniq_id: string | null
+        }
+        Insert: {
+          brand?: string | null
+          crawl_timestamp?: string | null
+          description?: string | null
+          discounted_price?: string | null
+          image?: Json | null
+          is_FK_Advantage_product?: boolean | null
+          overall_rating?: string | null
+          pid?: string | null
+          product_category_tree?: Json | null
+          product_name?: string | null
+          product_rating?: string | null
+          product_specifications?: string | null
+          product_url?: string | null
+          retail_price?: string | null
+          uniq_id?: string | null
+        }
+        Update: {
+          brand?: string | null
+          crawl_timestamp?: string | null
+          description?: string | null
+          discounted_price?: string | null
+          image?: Json | null
+          is_FK_Advantage_product?: boolean | null
+          overall_rating?: string | null
+          pid?: string | null
+          product_category_tree?: Json | null
+          product_name?: string | null
+          product_rating?: string | null
+          product_specifications?: string | null
+          product_url?: string | null
+          retail_price?: string | null
+          uniq_id?: string | null
+        }
+        Relationships: []
+      }
+      flipkart_2: {
         Row: {
           brand: string | null
           crawl_timestamp: string | null
