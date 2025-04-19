@@ -10,16 +10,22 @@ import ProductPagination from "./ProductPagination";
 
 interface ProductGridProps {
   searchQuery?: string;
+  categoryFilter?: string;
+  limit?: number;
 }
 
-const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
+const ProductGrid = ({ 
+  searchQuery = "", 
+  categoryFilter,
+  limit
+}: ProductGridProps) => {
   const [sortOption, setSortOption] = useState("relevance");
   const [currentPage, setCurrentPage] = useState(1);
   const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({
     min: null,
     max: null
   });
-  const itemsPerPage = 12;
+  const itemsPerPage = limit || 12;
 
   const {
     products,
@@ -32,7 +38,9 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
     searchQuery,
     sortOption,
     currentPage,
-    priceRange
+    priceRange,
+    categoryFilter,
+    limit
   });
 
   const handleSortChange = (sortOpt: string) => {
@@ -54,18 +62,20 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
 
   return (
     <div>
-      <FilterBar 
-        onSortChange={handleSortChange} 
-        totalResults={loading ? 0 : products.length} 
-        onPriceFilterChange={handlePriceFilterChange}
-      />
+      {!limit && (
+        <FilterBar 
+          onSortChange={handleSortChange} 
+          totalResults={loading ? 0 : products.length} 
+          onPriceFilterChange={handlePriceFilterChange}
+        />
+      )}
       
       {error && (
         <ProductGridError error={error} onRetry={fetchProducts} />
       )}
       
       {loading ? (
-        <ProductGridSkeleton />
+        <ProductGridSkeleton count={limit || 12} />
       ) : products.length === 0 && suggestedProducts.length === 0 ? (
         <ProductGridEmpty onRefresh={fetchProducts} />
       ) : (
@@ -94,7 +104,7 @@ const ProductGrid = ({ searchQuery = "" }: ProductGridProps) => {
             </div>
           )}
           
-          {products.length > 0 && totalPages > 1 && (
+          {!limit && products.length > 0 && totalPages > 1 && (
             <ProductPagination 
               currentPage={currentPage}
               totalPages={totalPages}

@@ -12,9 +12,18 @@ interface UseProductsProps {
     min: number | null;
     max: number | null;
   };
+  categoryFilter?: string;
+  limit?: number;
 }
 
-export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }: UseProductsProps) => {
+export const useProducts = ({ 
+  searchQuery, 
+  sortOption, 
+  currentPage, 
+  priceRange,
+  categoryFilter,
+  limit
+}: UseProductsProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [suggestedProducts, setSuggestedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -38,8 +47,8 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
     setLastSearchTime(Date.now());
 
     try {
-      console.log(`Fetching products. Query: "${searchQuery}", Sort: ${sortOption}, Page: ${currentPage}, Price range: ${priceRange.min}-${priceRange.max}`);
-      const itemsPerPage = 12;
+      console.log(`Fetching products. Query: "${searchQuery}", Sort: ${sortOption}, Page: ${currentPage}, Price range: ${priceRange.min}-${priceRange.max}, Category: ${categoryFilter || 'all'}`);
+      const itemsPerPage = limit || 12;
       const offset = (currentPage - 1) * itemsPerPage;
       
       // Call the Supabase edge function
@@ -53,6 +62,7 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
           limit: itemsPerPage,
           offset: offset,
           discounted: false, // Can be made dynamic based on UI filters
+          categoryFilter: categoryFilter, // Pass the category filter to the backend
         },
       });
 
@@ -118,7 +128,7 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
         abortControllerRef.current.abort();
       }
     };
-  }, [searchQuery, sortOption, currentPage, priceRange.min, priceRange.max]);
+  }, [searchQuery, sortOption, currentPage, priceRange.min, priceRange.max, categoryFilter, limit]);
 
   return {
     products,

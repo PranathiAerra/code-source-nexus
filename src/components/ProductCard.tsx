@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -21,10 +22,16 @@ interface ProductCardProps {
 
 const ProductCard = ({ product }: ProductCardProps) => {
   const [imageError, setImageError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const handleImageError = () => {
     console.error(`Failed to load image for product: ${product.id}`, product.image);
     setImageError(true);
+    setIsLoading(false);
+  };
+
+  const handleImageLoad = () => {
+    setIsLoading(false);
   };
 
   const getValidImageUrl = (imageUrl: string): string => {
@@ -76,29 +83,37 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col transition-shadow hover:shadow-lg">
+    <Card className="overflow-hidden h-full flex flex-col transition-all hover:shadow-lg group bg-white">
       <div className="aspect-square relative overflow-hidden bg-gray-100">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="w-10 h-10 border-4 border-peach-300 border-t-peach-600 rounded-full animate-spin"></div>
+          </div>
+        )}
         <img
           src={imageUrl}
           alt={product.name}
-          className="object-contain h-full w-full p-4"
+          className={`object-contain h-full w-full p-4 transform group-hover:scale-105 transition-transform duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           onError={handleImageError}
+          onLoad={handleImageLoad}
           loading="lazy"
         />
         {product.offer && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
+          <div className="absolute top-2 right-2 bg-peach-600 text-white text-xs font-bold px-2 py-1 rounded">
             {product.offer}
           </div>
         )}
+        <div className="absolute bottom-0 left-0 w-full p-2 bg-white/80 backdrop-blur-sm text-sm text-gray-500 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+          {product.store}
+        </div>
       </div>
       <div className="p-4 flex-grow flex flex-col">
-        <div className="text-sm text-gray-500 mb-1">{product.store}</div>
-        <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+        <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 group-hover:text-peach-600 transition-colors">{product.name}</h3>
         
         <div className="flex items-center mb-3">{renderRating()}</div>
         
         <div className="flex items-baseline mb-4 mt-auto">
-          <div className="font-bold text-lg flex items-center">
+          <div className="font-bold text-lg flex items-center text-peach-700">
             <IndianRupee className="h-4 w-4 mr-1" />
             {formatPrice(product.price)}
           </div>
@@ -117,7 +132,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         
         <Button
           asChild
-          className="w-full bg-blue-600 hover:bg-blue-700"
+          className="w-full bg-peach-600 hover:bg-peach-700"
         >
           <a href={product.storeUrl} target="_blank" rel="noopener noreferrer">
             View Deal

@@ -61,7 +61,7 @@ const SearchBar = ({
       </div>
       <Button 
         type="submit" 
-        className="h-12 px-6 rounded-l-none bg-blue-600 hover:bg-blue-700"
+        className="h-12 px-6 rounded-l-none bg-peach-600 hover:bg-peach-700"
       >
         <Search className="h-5 w-5 mr-2" />
         <span>Search</span>

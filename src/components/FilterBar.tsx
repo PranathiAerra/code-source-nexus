@@ -69,7 +69,7 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
             onValueChange={(value) => onSortChange(value as SortOption)}
             defaultValue="relevance"
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-40 bg-white">
               <SelectValue placeholder="Relevance" />
             </SelectTrigger>
             <SelectContent>
@@ -88,7 +88,7 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
               <Input
                 type="number"
                 placeholder="Min"
-                className="pl-8 w-24"
+                className="pl-8 w-24 bg-white"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
               />
@@ -99,7 +99,7 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
               <Input
                 type="number"
                 placeholder="Max"
-                className="pl-8 w-24"
+                className="pl-8 w-24 bg-white"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
               />
@@ -109,7 +109,7 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
           <Button 
             onClick={handlePriceFilter}
             variant="outline"
-            className="whitespace-nowrap"
+            className="whitespace-nowrap bg-white"
             size="sm"
           >
             Apply
@@ -129,13 +129,14 @@ const FilterBar = ({ onSortChange, onPriceFilterChange, totalResults }: FilterBa
             max={maxPriceValue}
             step={1000}
             onValueChange={handleSliderChange}
+            className="bg-white"
           />
         </div>
 
         <Button 
           variant="outline" 
           size="sm"
-          className="flex items-center"
+          className="flex items-center bg-white"
           onClick={handleResetFilters}
         >
           <SlidersHorizontal className="h-4 w-4 mr-1" />

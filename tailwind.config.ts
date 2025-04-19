@@ -65,6 +65,30 @@ export default {
 					800: '#1E40AF',
 					900: '#1E3A8A',
 				},
+				peach: {
+					50: '#FFF6F0',
+					100: '#FFEDE1',
+					200: '#FFD7BC',
+					300: '#FFC197',
+					400: '#FFA972',
+					500: '#FF904D',
+					600: '#F97316', // Bright Orange
+					700: '#DB5A0F',
+					800: '#B7470D',
+					900: '#93390A',
+				},
+				beige: {
+					50: '#FFFBF5',
+					100: '#FFF7ED',
+					200: '#FDE1D3', // Soft Peach
+					300: '#FACFB8',
+					400: '#F7BD9E',
+					500: '#F4AB84',
+					600: '#F0986A',
+					700: '#E98550',
+					800: '#E67236',
+					900: '#D45E1C',
+				},
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -87,12 +111,27 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				fadeIn: {
+					'0%': { opacity: '0', transform: 'translateY(10px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
+				},
+				slideIn: {
+					'0%': { transform: 'translateX(-20px)', opacity: '0' },
+					'100%': { transform: 'translateX(0)', opacity: '1' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
-			}
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fadeIn 0.5s ease-out forwards',
+				'slide-in': 'slideIn 0.5s ease-out forwards'
+			},
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
+				display: ['Playfair Display', 'serif'],
+				cursive: ['Caveat', 'cursive']
+			},
 		}
 	},
 	plugins: [require("tailwindcss-animate")],
