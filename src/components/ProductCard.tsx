@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,22 +23,24 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const [imageError, setImageError] = useState(false);
   
   const handleImageError = () => {
+    console.error(`Failed to load image for product: ${product.id}`, product.image);
     setImageError(true);
   };
 
   const getValidImageUrl = (imageUrl: string): string => {
     try {
-      if (imageUrl.startsWith('[')) {
-        const urls = JSON.parse(imageUrl);
-        return Array.isArray(urls) && urls.length > 0 ? urls[0] : 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
+      if (!imageUrl || imageUrl.trim() === '') {
+        console.warn(`Empty image URL for product: ${product.id}`);
+        return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
       }
+
+      const cleanUrl = imageUrl.trim();
       
-      if (imageUrl.includes('|')) {
-        return imageUrl.split('|')[0];
-      }
+      console.log(`Processing image URL for ${product.id}: ${cleanUrl.substring(0, 100)}${cleanUrl.length > 100 ? '...' : ''}`);
       
-      return imageUrl;
+      return cleanUrl;
     } catch (e) {
+      console.error(`Error processing image URL for product ${product.id}:`, e);
       return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e';
     }
   };

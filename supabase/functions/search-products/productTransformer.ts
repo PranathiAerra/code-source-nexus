@@ -7,6 +7,27 @@ const cleanImageUrl = (imageUrl: string | null): string => {
   try {
     if (!imageUrl) return fallbackImage;
 
+    // Handle JSONB data from Flipkart tables
+    if (typeof imageUrl === 'object') {
+      // If it's already parsed JSONB
+      const imageData = imageUrl as any;
+      
+      // Handle array format
+      if (Array.isArray(imageData)) {
+        return imageData[0] || fallbackImage;
+      }
+      
+      // Handle object format with nested structure
+      if (imageData.url) return imageData.url;
+      if (imageData.primary) return imageData.primary;
+      
+      // Try to get the first value if it's an object with URLs
+      const values = Object.values(imageData);
+      if (values.length > 0 && typeof values[0] === 'string') {
+        return values[0];
+      }
+    }
+
     // Handle JSON string arrays
     if (imageUrl.startsWith('[')) {
       try {
@@ -21,12 +42,6 @@ const cleanImageUrl = (imageUrl: string | null): string => {
     if (imageUrl.includes('|')) {
       const urls = imageUrl.split('|');
       return urls[0] || fallbackImage;
-    }
-
-    // Handle JSONB format (from Flipkart dataset)
-    if (typeof imageUrl === 'object') {
-      const values = Object.values(imageUrl);
-      return values.length > 0 && typeof values[0] === 'string' ? values[0] : fallbackImage;
     }
 
     // Handle base64 images
@@ -81,6 +96,7 @@ export const transformProduct = {
 
   flipkart: (product: any) => {
     try {
+      // Extract and clean the image URL from JSONB data
       const imageUrl = cleanImageUrl(product.image);
       console.log(`Flipkart image URL: ${imageUrl.substring(0, 100)}${imageUrl.length > 100 ? '...' : ''}`);
       
