@@ -53,7 +53,6 @@ export const useProducts = ({ searchQuery, sortOption, currentPage, priceRange }
           limit: itemsPerPage,
           offset: offset,
           discounted: false, // Can be made dynamic based on UI filters
-          // Remove the signal property as it's not supported in FunctionInvokeOptions
         },
       });
 
