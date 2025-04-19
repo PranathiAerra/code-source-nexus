@@ -7,6 +7,17 @@ const cleanImageUrl = (imageUrl: string | null): string => {
   try {
     if (!imageUrl) return fallbackImage;
 
+    // Handle JSON string arrays (exactly matching your example)
+    if (typeof imageUrl === 'string' && imageUrl.startsWith('[') && imageUrl.endsWith(']')) {
+      try {
+        const urls: string[] = JSON.parse(imageUrl);
+        return urls.length > 0 ? urls[0] : fallbackImage;
+      } catch (parseError) {
+        console.error('Failed to parse image URL array:', parseError);
+        return fallbackImage;
+      }
+    }
+
     // Handle JSONB data from Flipkart tables
     if (typeof imageUrl === 'object') {
       // If it's already parsed JSONB
@@ -98,7 +109,7 @@ export const transformProduct = {
     try {
       // Extract and clean the image URL from JSONB data
       const imageUrl = cleanImageUrl(product.image);
-      console.log(`Flipkart image URL: ${imageUrl.substring(0, 100)}${imageUrl.length > 100 ? '...' : ''}`);
+      console.log(`Flipkart image URLs: ${imageUrl}`);
       
       return {
         id: product.uniq_id || String(Math.random()),

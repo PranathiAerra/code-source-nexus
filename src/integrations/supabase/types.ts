@@ -178,7 +178,7 @@ export type Database = {
           product_specifications: string | null
           product_url: string | null
           retail_price: string | null
-          uniq_id: string | null
+          uniq_id: string
         }
         Insert: {
           brand?: string | null
@@ -195,7 +195,7 @@ export type Database = {
           product_specifications?: string | null
           product_url?: string | null
           retail_price?: string | null
-          uniq_id?: string | null
+          uniq_id: string
         }
         Update: {
           brand?: string | null
@@ -212,7 +212,7 @@ export type Database = {
           product_specifications?: string | null
           product_url?: string | null
           retail_price?: string | null
-          uniq_id?: string | null
+          uniq_id?: string
         }
         Relationships: []
       }
